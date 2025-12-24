@@ -16,7 +16,7 @@ SEMUA MODULE ODOO WAJIB BERADA LANGSUNG DI ROOT PROJECT
 
 Struktur yang BENAR:
 
-.
+```
 |-- module_name/
 |   |-- __init__.py
 |   |-- __manifest__.py
@@ -29,8 +29,9 @@ Struktur yang BENAR:
 |
 |-- README.md
 |-- .gitignore
+```
 
-DILARANG:
+## DILARANG:
 - addons/module_name
 - custom_addons/module_name
 - nested folder module
@@ -62,7 +63,7 @@ Setiap module WAJIB memiliki manifest lengkap.
 
 Field minimum:
 - name
-- version (17.0.x.x.x)
+- version (18.0.x.x.x)
 - category
 - summary
 - author
@@ -82,39 +83,48 @@ Aturan manifest:
 ## STRUKTUR INTERNAL MODULE
 
 MODELS
+```
 models/
 - __init__.py
 - satu file = satu domain
 - hindari god object
 - gunakan _inherit secara eksplisit
+```
 
 VIEWS
+```
 views/
 - pisahkan menu, form, tree
 - xpath harus spesifik dan aman
 - hindari xpath global
+```
 
 SECURITY
+```
 security/
 - ir.model.access.csv
 - security.xml
 - semua model WAJIB punya access rule
 - jangan hardcode group di Python
+```
 
 DATA
+```
 data/
 - sequence.xml
 - default_data.xml
 - gunakan noupdate untuk data referensi
 - tidak boleh ada logic bisnis di XML
-
+```
 ---
 
 ## TESTING (DISARANKAN)
 
+```
 tests/
 - __init__.py
 - test_module.py
+```
 
 Fokus test:
 - perhitungan (tax, discount, total)
@@ -158,6 +168,29 @@ Sebelum merge:
 - Manifest valid
 - Dependency benar
 - Tidak memecahkan backward compatibility
+
+---
+
+## CI / CD PIPELINE
+
+Repository ini TERINTEGRASI dengan CI/CD otomatis.
+
+ATURAN BRANCH:
+- branch `staging`  → CI/CD STAGING AKAN BERJALAN OTOMATIS
+- branch `master`   → CI/CD PRODUCTION AKAN BERJALAN OTOMATIS
+
+PERILAKU PIPELINE:
+- Setiap push ke `staging` akan:
+  - Menjalankan CI (lint, test, validation manifest)
+  - Melakukan deployment ke environment STAGING
+- Setiap push ke `master` akan:
+  - Menjalankan CI penuh
+  - Melakukan deployment ke environment PRODUCTION
+
+ATURAN PENTING:
+- DILARANG push langsung ke `master`
+- Semua perubahan HARUS melalui `staging`
+- Pastikan module install & upgrade LULUS di staging sebelum merge ke master
 
 ---
 
