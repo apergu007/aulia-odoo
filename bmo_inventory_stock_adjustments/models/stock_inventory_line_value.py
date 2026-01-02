@@ -13,8 +13,7 @@ class InventoryLineValue(models.Model):
         'stock.inventory', 'Inventory', index=True, ondelete='cascade')
     product_id = fields.Many2one(
         'product.product', 'Product', domain=[('type', '=', 'product')], index=True, required=True)
-    product_uom_id = fields.Many2one(
-        'uom.uom', 'Product Unit of Measure', required=True)
+    product_uom_id = fields.Many2one(related='product_id.uom_id', string='UoM', store=True)
     product_uom_category_id = fields.Many2one(string='Uom category', related='product_uom_id.category_id', readonly=True)
     product_qty = fields.Float(
         'Checked Quantity',
@@ -155,56 +154,57 @@ class InventoryLineValue(models.Model):
     #             vals_list.append(vals)
     #     return self.env['stock.move'].create(vals_list)
 
-    # def action_validate_revaluation(self):
-    #     self.ensure_one()
-    #     if self.inventory_id.type_adjustments == 'value_only' and self.value_diff != 0:
-    #         product_id = self.product_id.with_company(self.company_id)
-    #         description = _('INV:') + (self.inventory_id.name or '')
+    def action_validate_revaluation(self):
+        self.ensure_one()
+        if self.inventory_id.type_adjustments == 'value_only' and self.value_diff != 0:
+            product_id = self.product_id.with_company(self.company_id)
+            description = _('INV:') + (self.inventory_id.name or '')
 
-    #         revaluation_svl_vals = {
-    #             'company_id'    : self.company_id.id,
-    #             'x_inventory_id': self.inventory_id.id,
-    #             'product_id'    : product_id.id,
-    #             'reference'     : description,
-    #             'description'   : description,
-    #             'value'         : self.value_diff,
-    #             'quantity'      : 0,
-    #         }
-    #         revaluation_svl = self.env['stock.valuation.layer'].create(revaluation_svl_vals)
+            revaluation_svl_vals = {
+                'company_id'        : self.company_id.id,
+                'stock_inventory_id': self.inventory_id.id,
+                'product_id'    : product_id.id,
+                'reference'     : description,
+                'description'   : description,
+                'value'         : self.value_diff,
+                'quantity'      : 0,
+            }
+            revaluation_svl = self.env['stock.valuation.layer'].create(revaluation_svl_vals)
 
-    #         accounts = product_id.product_tmpl_id.get_product_accounts()
-    #         debit_account_id = False
-    #         credit_account_id = False
+            accounts = product_id.product_tmpl_id.get_product_accounts()
+            debit_account_id = False
+            credit_account_id = False
 
-    #         if self.value_diff < 0:
-    #             debit_account_id = product_id.property_stock_inventory.valuation_out_account_id.id if product_id.property_stock_inventory.valuation_out_account_id else accounts.get('stock_output') and accounts['stock_output'].id
-    #             credit_account_id = accounts.get('stock_valuation') and accounts['stock_valuation'].id
-    #         else:
-    #             debit_account_id = accounts.get('stock_valuation') and accounts['stock_valuation'].id
-    #             credit_account_id = product_id.property_stock_inventory.valuation_in_account_id.id if product_id.property_stock_inventory.valuation_in_account_id else accounts.get('stock_input') and accounts['stock_input'].id
+            if self.value_diff < 0:
+                debit_account_id = product_id.property_stock_inventory.valuation_out_account_id.id if product_id.property_stock_inventory.valuation_out_account_id else accounts.get('stock_output') and accounts['stock_output'].id
+                credit_account_id = accounts.get('stock_valuation') and accounts['stock_valuation'].id
+            else:
+                debit_account_id = accounts.get('stock_valuation') and accounts['stock_valuation'].id
+                credit_account_id = product_id.property_stock_inventory.valuation_in_account_id.id if product_id.property_stock_inventory.valuation_in_account_id else accounts.get('stock_input') and accounts['stock_input'].id
 
-    #         move_vals = {
-    #             'journal_id'    : accounts['stock_journal'].id,
-    #             'company_id'    : self.company_id.id,
-    #             'ref'           : _("Revaluation of %s", product_id.display_name),
-    #             'date'          : self.inventory_id.date,
-    #             'stock_valuation_layer_ids': [(6, None, [revaluation_svl.id])],
-    #             'move_type' : 'entry',
-    #             'line_ids'  : [(0, 0, {
-    #                 'name'      : description,
-    #                 'account_id': debit_account_id,
-    #                 'debit'     : abs(self.value_diff),
-    #                 'credit'    : 0,
-    #                 'product_id': product_id.id,
-    #             }), (0, 0, {
-    #                 'name'      : description,
-    #                 'account_id': credit_account_id,
-    #                 'debit'     : 0,
-    #                 'credit'    : abs(self.value_diff),
-    #                 'product_id': product_id.id,
-    #             })],
-    #         }
-    #         account_move = self.env['account.move'].create(move_vals)
-    #         account_move._post()
+            move_vals = {
+                'journal_id'    : accounts['stock_journal'].id,
+                'company_id'    : self.company_id.id,
+                'ref'           : _("Revaluation of %s", product_id.display_name),
+                'date'          : self.inventory_id.accounting_date,
+                'stock_valuation_layer_ids': [(6, None, [revaluation_svl.id])],
+                'move_type' : 'entry',
+                'line_ids'  : [(0, 0, {
+                    'name'      : description,
+                    'account_id': debit_account_id,
+                    'debit'     : abs(self.value_diff),
+                    'credit'    : 0,
+                    'product_id': product_id.id,
+                }), (0, 0, {
+                    'name'      : description,
+                    'account_id': credit_account_id,
+                    'debit'     : 0,
+                    'credit'    : abs(self.value_diff),
+                    'product_id': product_id.id,
+                })],
+            }
+            account_move = self.env['account.move'].create(move_vals)
+            account_move._post()
 
-    #     return True
+        return True
+        

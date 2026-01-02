@@ -72,7 +72,7 @@
                         <field name="partner_id" readonly="state != 'draft'" invisible="filter not in ('owner', 'product_owner')" required="filter in ('owner', 'product_owner')" />
                         <field name="package_id"  invisible="filter != 'pack'" required="filter == 'pack'" />
                         <field name="add_onhand_zero" readonly="state != 'draft'"/>
-                        <button name="set_product_serial_type_quantity" type="object" string="SET QTY FOR Serial NUMBER" invisible="state != 'confirm'" class="btn btn-primary"/>
+                        <button name="set_product_serial_type_quantity" type="object" string="SET QTY FOR Serial NUMBER" invisible="state != 'confirm' and type_adjustments != 'value_only'" class="btn btn-primary"/>
                     </group>
                 </group>
                 <notebook invisible="state == 'draft'">
@@ -81,14 +81,14 @@
                             <list string="Inventory Details" editable="bottom" >
                                 <field name="product_id"  domain="[('is_storable', '=', True), ('type','=','consu')]"/>
                                 <field name="product_uom_id" string="UoM" groups="uom.group_uom"/>
-                                <field name="location_id" domain="[('id', 'child_of', parent.location_id)]" groups="stock.group_stock_multi_locations" invisible="1"/>
+                                <field name="location_id" domain="[('id', 'child_of', parent.location_id)]" groups="stock.group_stock_multi_locations" column_invisible="1"/>
                                 <field name="prod_lot_id" domain="[('product_id', '=', product_id)]" context="{'default_product_id': product_id}"  groups="stock.group_production_lot" required="lot_serial"/>
                                 <field name="package_id" groups="stock.group_tracking_lot"/>
                                 <field name="lot_id" />
                                 <field name="lot_serial"/>
                                 <button name="select_stock_inventory_line" type="object" icon="fa-list" title="Open serial number Popup" width="0.1" invisible="not lot_id and not lot_serial"/>
-                                <field name="currency_id" invisible="1"/>
-                                <field name="price_value" decoration-danger="inventory_quantity &lt; quantity" decoration-success="inventory_quantity &gt; quantity" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Value"/>
+                                <field name="currency_id" column_invisible="1"/>
+                                <field name="price_value" decoration-danger="inventory_quantity &lt; quantity" decoration-success="inventory_quantity &gt; quantity" widget="monetary" options="{'currency_field': 'currency_id'}" sum="Total Value" column_invisible="parent.type_adjustments == 'qty_only'"/>
                                 <field name="partner_id" groups="stock.group_tracking_owner"/>
                                 <field name="available_quantity" decoration-info="available_quantity != quantity" force_save="1"/>
                                 <field name="reserved_quantity" />
@@ -96,7 +96,7 @@
                                 <field name="quantity" decoration-info="available_quantity != quantity" force_save="1"/>
                                 <field name="make_it_zero" decoration-danger="make_it_zero" force_save="1"/>
                                 <field name="inventory_quantity" decoration-danger="inventory_quantity &lt; quantity" decoration-success="inventory_quantity &gt; quantity"/>
-                                <field name="state" invisible="True"/>
+                                <field name="state" column_invisible="True"/>
                             </list>
                         </field>
                         <p></p>
@@ -114,10 +114,10 @@
                         </ul>
                     </page>
                     <page string="Inventory Value Details">
-                        <field name="line_value_ids" readonly="state != 'draft'" invisible="type_adjustments != 'value_only'">
+                        <field name="line_value_ids" readonly="state != 'confirm'" invisible="type_adjustments != 'value_only'">
                             <list string="Inventory Details" editable="bottom" decoration-info="product_qty != theoretical_qty" decoration-danger="theoretical_qty &lt; 0">
                                 <field name="product_id" domain="[('type','=','consu')]" attrs="{'readonly': [('parent.filter', '=', 'consu')]}" options="{'no_create': True, 'no_edit':True}" force_save="1"/>
-                                <field name="product_uom_id" string="UoM" domain="[('category_id', '=', product_uom_category_id)]" force_save="1" readonly="1" width="45px"/>
+                                <field name="product_uom_id" string="UoM" force_save="1" readonly="1" width="45px"/>
                                 <field name="product_uom_category_id" column_invisible="1"/>
                                 <field name="theoretical_qty" readonly="1"/>
                                 <field name="product_qty" string="Real Quantity" column_invisible="parent.type_adjustments == 'value_only'"/>

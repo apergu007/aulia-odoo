@@ -4,6 +4,19 @@ from odoo.exceptions import UserError, ValidationError
 from odoo.http import request
 from markupsafe import Markup
 
+class StockQuant(models.Model):
+    _inherit = 'stock.quant'
+
+    stock_inventory_id = fields.Many2one('stock.inventory')
+
+    def _get_inventory_move_values(self, qty, location_id, location_dest_id, package_id=False, package_dest_id=False):
+        res = super(StockQuant, self)._get_inventory_move_values(qty, location_id, location_dest_id, package_id=package_id, package_dest_id=package_dest_id)
+
+        res.update({
+            'stock_inventory_id': self.stock_inventory_id.id if self.stock_inventory_id else False,
+        })
+
+        return res
 
 class StockMove(models.Model):
     _inherit = "stock.move"
@@ -145,7 +158,7 @@ class StockInventory(models.Model):
             ('company_id', '=', self.company_id.id),
             ('location_id', '=', self.location_id.id)
         ]
-        if self.type_adjustments == 'normal':
+        if self.type_adjustments in ('normal', 'qty_only'):
             product = self.env['product.product']
             if self.filter == 'none':
                 rec = self.env['stock.quant'].search(domain)
@@ -189,7 +202,8 @@ class StockInventory(models.Model):
                     raise ValidationError(_('Record not available.'))
             if self.filter == 'partial':
                 self.write({'state':'confirm',})
-
+        else:
+            self.write({'state':'confirm',})
 
     def prepare_stock_counting_lines(self, rec, product_id=None):
         domain = [('company_id', '=', self.company_id.id),
@@ -201,17 +215,19 @@ class StockInventory(models.Model):
                 bom_ids = x.product_id and x.product_id.product_tmpl_id and 'bom_ids' in x.product_id.product_tmpl_id and x.product_id.product_tmpl_id.bom_ids
                 if not bom_ids or bom_ids.filtered(lambda bom: bom.type != 'phantom'):
                     self.write({
-                        'line_ids': [(0,0,{
-                        'product_id': x.product_id.id,
-                        'product_uom_id': x.product_uom_id.id,
-                        'location_id': x.location_id.id,
-                        'prod_lot_id': x.lot_id.id,
-                        'package_id': x.package_id.id,
-                        'available_quantity' : x.available_quantity,
-                        'quantity':x.quantity,
-                        'inventory_quantity' :x.inventory_quantity })],
                         'state':'confirm',
                         'date': fields.Datetime.now(),
+                        'stock_inventory_id': self.id,
+                        'line_ids': [(0,0,{
+                            'product_id': x.product_id.id,
+                            'product_uom_id': x.product_uom_id.id,
+                            'location_id': x.location_id.id,
+                            'prod_lot_id': x.lot_id.id,
+                            'package_id': x.package_id.id,
+                            'available_quantity' : x.available_quantity,
+                            'quantity':x.quantity,
+                            'inventory_quantity' :x.inventory_quantity,
+                        })],
                     })
         if product_id:
             for x in product_id:
@@ -219,14 +235,18 @@ class StockInventory(models.Model):
                 if not bom_ids or bom_ids.filtered(lambda bom: bom.type != 'phantom'):
                     self.write({
                         'state':'confirm',
+                        'stock_inventory_id': self.id,
                         'line_ids': [(0,0,{
-                        'product_id': x.id,
-                        'product_uom_id': x.uom_id.id,
-                        'location_id': self.location_id.id,
+                            'product_id': x.id,
+                            'product_uom_id': x.uom_id.id,
+                            'location_id': self.location_id.id,
                         })],
                     })
 
     def action_send_for_approval(self):
+
+        if self.type_adjustments in ('normal', 'qty_only') and not self.line_ids:
+            raise UserError(_('Please add inventory lines before sending for approval.'))
         for on_hand_qty in self.line_ids:
             if not on_hand_qty.inventory_quantity and not on_hand_qty.make_it_zero:
                 on_hand_qty.inventory_quantity = on_hand_qty.quantity
@@ -268,40 +288,66 @@ class StockInventory(models.Model):
             )
         self.write({'state':'approved'})
 
+    def action_update_standar_price(self):
+        for line in self.line_value_ids:
+            product = line.product_id
+            if product.value_svl != 0 and product.quantity_svl != 0:
+                product.sudo().with_context(disable_auto_svl=True).write({'standard_price': product.value_svl / product.quantity_svl})
+        return True
+
+    def post_svl_invnetory(self):
+        for inventory in self.filtered(lambda x: x.state not in ('done','cancel')):
+            for inv_line in inventory.line_value_ids:
+                inv_line.action_validate_revaluation()
+            for line in inventory.line_value_ids:
+                product = line.product_id
+                product.sudo().with_context(disable_auto_svl=True).write({'standard_price': line.price_unit_new})
+        return True
+    
+    def _action_done_value_only(self):
+        self.post_svl_invnetory()
+        self.action_update_standar_price()
+        self.write({'state': 'done'})
+        return True
+
     def action_done(self):
-        for line in self.line_ids:
-            domain = [
-                ('company_id', '=', line.stock_inventory_id.company_id.id),
-                ('location_id', '=', line.stock_inventory_id.location_id.id),
-                ('owner_id', '=', line.stock_inventory_id.partner_id.id),
-            ]
-            if line.product_id.tracking in ['lot', 'serial'] and not line.prod_lot_id:
-                raise UserError('Please Add serial number for this product %s' % line.product_id.display_name)
+        if self.type_adjustments in ('normal', 'qty_only') and not self.line_ids:
+            for line in self.line_ids:
+                domain = [
+                    ('company_id', '=', line.stock_inventory_id.company_id.id),
+                    ('location_id', '=', line.stock_inventory_id.location_id.id),
+                    ('owner_id', '=', line.stock_inventory_id.partner_id.id),
+                ]
+                if line.product_id.tracking in ['lot', 'serial'] and not line.prod_lot_id:
+                    raise UserError('Please Add serial number for this product %s' % line.product_id.display_name)
 
-            
-            quant_rec = self.env['stock.quant'].search(domain + [('product_id','=',line.product_id.id)])
-            if line.prod_lot_id:
-                quant_rec = self.env['stock.quant'].search(domain + [('product_id','=',line.product_id.id),('lot_id','=',line.prod_lot_id.id)])
+                
+                quant_rec = self.env['stock.quant'].search(domain + [('product_id','=',line.product_id.id)])
+                if line.prod_lot_id:
+                    quant_rec = self.env['stock.quant'].search(domain + [('product_id','=',line.product_id.id),('lot_id','=',line.prod_lot_id.id)])
 
-            for validate in quant_rec:
-                if line.make_it_zero:
-                    validate.write({'inventory_quantity':0.0})
-                    validate.action_apply_inventory()
-                    line.write({'available_quantity':validate.available_quantity, 'reserved_quantity':validate.reserved_quantity, 'inventory_quantity':0.0})
-                elif validate.inventory_quantity != line.inventory_quantity:
-                    validate.write({'inventory_quantity':line.inventory_quantity})
-                    validate.action_apply_inventory()
-                    line.write({'available_quantity':validate.available_quantity, 'reserved_quantity':validate.reserved_quantity})
+                for validate in quant_rec:
+                    if line.make_it_zero:
+                        validate.write({'inventory_quantity':0.0, 'stock_inventory_id': self.id})
+                        validate.action_apply_inventory()
+                        line.write({'available_quantity':validate.available_quantity, 'reserved_quantity':validate.reserved_quantity, 'inventory_quantity':0.0})
+                    elif validate.inventory_quantity != line.inventory_quantity:
+                        validate.write({'inventory_quantity':line.inventory_quantity, 'stock_inventory_id': self.id})
+                        validate.action_apply_inventory()
+                        line.write({'available_quantity':validate.available_quantity, 'reserved_quantity':validate.reserved_quantity})
 
-            if not quant_rec:
-                stock_quant = self.env['stock.quant'].create({
-                    'product_id': line.product_id.id,
-                    'location_id': line.location_id.id,
-                    'inventory_quantity':line.inventory_quantity,
-                    'lot_id': line.prod_lot_id.id,
-                })
-                stock_quant.action_apply_inventory()
-        self.write({'state':'done', 'accounting_date': fields.Datetime.now()})
+                if not quant_rec:
+                    stock_quant = self.env['stock.quant'].create({
+                        'product_id': line.product_id.id,
+                        'location_id': line.location_id.id,
+                        'inventory_quantity':line.inventory_quantity,
+                        'stock_inventory_id': self.id,
+                        'lot_id': line.prod_lot_id.id,
+                    })
+                    stock_quant.action_apply_inventory()
+            self.write({'state':'done', 'accounting_date': fields.Datetime.now()})
+        else:
+            self._action_done_value_only()
 
     def action_cancel_draft(self):
         self.write({

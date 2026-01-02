@@ -25,7 +25,7 @@
     'website'           : "https://bemosoft.com/",
     "support"           : "https://bemosoft.com/",
     'author'            : "Tian",
-    'depends'           : ['stock'],
+    'depends'           : ['stock_account'],
     'data'              : [
                             'security/ir.model.access.csv',
                             'security/security.xml',
