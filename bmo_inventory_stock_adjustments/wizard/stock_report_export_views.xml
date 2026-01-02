@@ -8,13 +8,16 @@
             <form>
                 <sheet>
                     <group>
+                        <field name="inventory_ids" widget="many2many_tags" options="{'no_create': True}" />
+                    </group>
+                    <!-- <group>
                         <group>
                             <field name="start_date" />
                         </group>
                         <group>
                             <field name="end_date" />
                         </group>
-                    </group>
+                    </group> -->
                     <footer>
                         <button name="action_report_excel" string="EXCEL" type="object" class="btn-primary"/>
                         <button string="Cancel" class="btn-secondary" special="cancel"/>

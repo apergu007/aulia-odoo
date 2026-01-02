@@ -1,6 +1,6 @@
 import io
 import json
-from odoo import fields, models, _
+from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 try:
     from odoo.tools.misc import xlsxwriter
@@ -12,13 +12,29 @@ class InventoryStockExport(models.TransientModel):
     _name="stock.adjustment.report.export"
     _description = "Stock Report Export"
 
+    inventory_ids = fields.Many2many('stock.inventory', string="Inventory Adjustments")
     start_date = fields.Date('Start Date', default=lambda self: fields.Date.today())
     end_date = fields.Date('End Date', default=lambda self: fields.Date.today())
+
+    @api.model
+    def default_get(self, fields_list):
+        res = super().default_get(fields_list)
+        
+        active_model = self.env.context.get('active_model')
+        active_ids = self.env.context.get('active_ids')
+
+        if active_model == 'stock.inventory' and active_ids:
+            res.update({
+                'inventory_ids': [fields.Command.set(active_ids)]
+            })
+            
+        return res
+
 
     def action_report_excel(self):
         record = []
         if self.start_date and self.end_date:
-            datas = self.env['stock.inventory'].sudo().search([('date','>=',self.start_date),('date','<=',self.end_date)])
+            datas = self.env['stock.inventory'].sudo().search([('id','in',self.inventory_ids.ids)])
             for i in datas:
                 for line in i.line_ids:
                     vals = {

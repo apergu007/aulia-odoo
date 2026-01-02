@@ -34,7 +34,7 @@
                             'views/stock_quant.xml',
                             'views/server_action.xml',
                             'wizard/inventory_selection.xml',
-                            'wizard/stock_report_export.xml',
+                            'wizard/stock_report_export_views.xml',
     ],
     'assets'            : {
                             'web.assets_backend': [
