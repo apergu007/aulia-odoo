@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <record id="view_partner_tree_inherit_bmo_partner" model="ir.ui.view">
+        <field name="name">res.partner.list.inherit.bmo_partner</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='phone']" position="before">
+                <field name="code_partner" required="1"/>
+            </xpath>
+            
+        </field>
+    </record>
+
     <record id="res_partner_form_inherit" model="ir.ui.view">
         <field name="name">res.partner.form.inherit</field>
         <field name="model">res.partner</field>
@@ -43,4 +57,5 @@
     <menuitem id="res_partner_menu_contacts_customer" parent="bmo_partner.contacts_menu_categ" action="account.res_partner_action_customer" sequence="1"/>
     <menuitem id="res_partner_menu_contacts_vendor" parent="bmo_partner.contacts_menu_categ" action="account.res_partner_action_supplier" sequence="2"/>
     <menuitem id="contacts.res_partner_menu_contacts" parent="bmo_partner.contacts_menu_categ" action="contacts.action_contacts" sequence="4"/>
+
 </odoo>

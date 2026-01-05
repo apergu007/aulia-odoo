@@ -3,6 +3,7 @@ from odoo import fields, models, api, _
 
 class ResPartner(models.Model):
     _inherit = 'res.partner'
+    _rec_names_search = ['complete_name', 'email', 'ref', 'vat', 'company_registry','code_partner']
 
     code_partner = fields.Char('Code Partner')
     is_customer = fields.Boolean(string="Is Customer")
