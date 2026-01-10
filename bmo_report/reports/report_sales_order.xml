@@ -51,7 +51,7 @@
                         <div class="row">
                             <div class="col-6">
                                 <div><span style="margin-right:2px;font-weight:bold;">Date. </span><span t-esc="o.date_order.strftime('%d-%B-%Y')"/></div>
-                                <div><span style="margin-right:2px;font-weight:bold;">Order No: </span><span t-esc="o.name"/></div>
+                                <div><span style="margin-right:2px;font-weight:bold;">Order No: </span><span t-esc="o.po_number"/></div>
                                 <div><span style="margin-right:2px;font-weight:bold;">Sales Person: </span><span t-esc="o.employee_id.name"/></div>
                             </div>
                             <div class="col-6">
@@ -248,24 +248,30 @@
 
                             <!-- Second column -->
                             <div class="col" style="text-align:center; width:25%; border:0px;">
+                                <t t-set="finance" t-value="o.approver_ids.filtered(lambda l:l.state == 'approved' and l.role == 'Finance')"/>
                                 <strong><span>Finance Approval: </span></strong>
-                                <div style="height:60px;"><!-- <span t-esc="o.review_apr_ids[-1].requested_by.name"/> --></div>
+                                <div>
+                                    <span t-if="finance" t-esc="finance.user_id.name"/>
+                                </div>
                                 <div style="text-align:center; vertical-align: top;">
-                                    <div>(_____________________________)</div>
+                                    <span t-if="finance" t-esc="(finance.write_date + relativedelta(hours=7)).strftime('%d-%B-%Y %H:%M')"/>
                                 </div>
                             </div>
 
                             <!-- Third column -->
                             <div class="col" style="text-align:center; width:25%; border:0px;">
+                                <t t-set="sales" t-value="o.approver_ids.filtered(lambda l:l.state == 'approved' and l.role == 'Sales')"/>
                                 <strong><span>Sales Approval: </span></strong>
-                                <div style="height:60px;"><!-- <span t-esc="o.review_apr_ids[-1].requested_by.name"/> --></div>
+                                <div>
+                                    <span t-if="sales" t-esc="sales.user_id.name"/>
+                                </div>
                                 <div style="text-align:center; vertical-align: top;">
-                                    <div>(_____________________________)</div>
+                                    <span t-if="sales" t-esc="(sales.write_date + relativedelta(hours=7)).strftime('%d-%B-%Y %H:%M')"/>
                                 </div>
                             </div>
                             <div class="col" style="text-align:center; width:25%; border:0px;">
                                 <strong><span>Customer Approval: </span></strong>
-                                <div style="height:60px;"><!-- <span t-esc="o.review_apr_ids[-1].requested_by.name"/> --></div>
+                                <div style="height:60px;"><!-- <span t-esc="o.approver_ids[-1].user_id.name"/> --></div>
                                 <div style="text-align:center; vertical-align: top;">
                                     <div>(_____________________________)</div>
                                 </div>
