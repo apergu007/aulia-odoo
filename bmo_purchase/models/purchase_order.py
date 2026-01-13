@@ -56,10 +56,13 @@ class PurchaseOrder(models.Model):
     #             rec.team_id = team_id.id
 
     def wizard_pop_up_cancel(self):
-        if self.state in ['purchase','done']:
-            raise UserError(
-                _("You cannot Reject a purchase request which is not draft.")
-            )
+        po_bill = self.filtered(lambda po: any(i.state not in ('cancel', 'draft') for i in po.invoice_ids))
+        if po_bill:
+            raise UserError(_(f"Unable to cancel purchase order(s). You must first cancel their related vendor bills.\n {' - '.join(po_bill.mapped('display_name'))}"))
+        # if self.state in ['purchase','done']:
+            # raise UserError(
+            #     _("You cannot Reject a purchase request which is not draft.")
+            # )
         return {
 			'name': "Reason Reject",
 			'type': 'ir.actions.act_window',
