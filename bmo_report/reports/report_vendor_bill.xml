@@ -35,7 +35,12 @@
                             </td>
                             <!-- Company Info -->
                             <td style="border:1px solid black;text-align:center;font-size:26px;" width="67%">
-                                <strong><span>Payment Request</span></strong>
+                                <t t-if="pay_req == 1">
+                                    <strong><span>Payment Request</span></strong>
+                                </t>
+                                <t t-if="other_req == 1">
+                                    <strong><span>Other Payment</span></strong>
+                                </t>
                             </td>
                         </tr>
                     </table>
@@ -134,11 +139,10 @@
                                             <span t-esc="col"/>
                                         </td>
                                         <td style="border: 1px solid black;text-align:left;">
-                                            <t t-if="line.product_id.default_code">
+                                            <t t-if="line.product_id">
                                                 <span t-esc="line.product_id.default_code"/>
                                             </t>
                                             <t t-else="">
-                                                <!-- Ambil teks di dalam tanda [ ] -->
                                                 <t t-set="name_text" t-value="(line.name or '').strip()"/>
                                                 <t t-if="'[' in name_text and ']' in name_text">
                                                     <t t-set="code_part" t-value="name_text.split(']')[0].replace('[','').strip()"/>
@@ -150,15 +154,16 @@
                                             </t>
                                         </td>
                                         <td style="border: 1px solid black;text-align:left;">
-                                            <t t-if="line.product_id">
+                                            <span t-field="line.account_id"/>
+                                            <!-- <t t-if="line.product_id">
                                                 <span t-esc="line.product_id.name"/>
                                             </t>
                                             <t t-else="">
                                                 <span t-esc="line.name"/>
-                                            </t>
+                                            </t> -->
                                         </td>
                                         <td style="border: 1px solid black;text-align:center;">
-                                            <span t-esc="line.quantity"/>
+                                            <span t-esc="line.quantity" t-options='{"widget": "float", "precision": 0}'/>
                                         </td>
                                         <td style="border: 1px solid black;text-align:right;">
                                             <span t-esc="'{0:,.2f}'.format(int(line.price_unit))"/>
@@ -296,15 +301,46 @@
         </t>
     </template>
 
+    <template id="report_pay_req">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="pay_req" t-value="1"/>
+                <t t-call="bmo_report.report_vendor_bill" />
+            </t>
+        </t>
+    </template>
+
+    <template id="report_other_req">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="other_req" t-value="1"/>
+                <t t-call="bmo_report.report_vendor_bill" />
+            </t>
+        </t>
+    </template>
+
     <record id="action_report_vendor_bill" model="ir.actions.report">
         <field name="name">Report Vendor Bill</field>
         <field name="model">account.move</field>
         <field name="report_type">qweb-pdf</field>
-        <field name="report_name">bmo_report.report_vendor_bill</field>
-        <field name="report_file">bmo_report.report_vendor_bill</field>
+        <field name="report_name">bmo_report.report_pay_req</field>
+        <field name="report_file">bmo_report.report_pay_req</field>
         <field name="print_report_name">'Vendor Bill - %s' % object.name</field>
         <field name="binding_model_id" ref="account.model_account_move"/>
         <field name="paperformat_id" ref="bmo_report.report_vendor_bill_paperformat" />
         <field name="binding_type">report</field>
     </record>
+
+    <record id="action_report_other_payment" model="ir.actions.report">
+        <field name="name">Report Other Payment</field>
+        <field name="model">account.move</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">bmo_report.report_other_req</field>
+        <field name="report_file">bmo_report.report_other_req</field>
+        <field name="print_report_name">'Other Payment - %s' % object.name</field>
+        <field name="binding_model_id" ref="account.model_account_move"/>
+        <field name="paperformat_id" ref="bmo_report.report_vendor_bill_paperformat" />
+        <field name="binding_type">report</field>
+    </record>
+
 </odoo>
