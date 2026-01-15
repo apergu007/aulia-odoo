@@ -10,7 +10,7 @@ class MrpProduction(models.Model):
         ('Mixing', 'Mixing'), ('Filling', 'Filling'), ('Packing', 'Packing')
     ], string="Tipe Produksi", related="bom_id.tipe_produksi")
     mrp_type = fields.Selection([
-        ('reguler', 'Reqular'),('maklon', 'Maklon'),
+        ('reguler', 'Regular'),('maklon', 'Maklon'),
         ('sample', 'Sample')], string='MRP Type')
     ok_date = fields.Date('OK Date')
     qty_min_bom = fields.Float('Qty Min Bom', related='bom_id.min_qty')

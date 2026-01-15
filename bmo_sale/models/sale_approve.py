@@ -5,5 +5,5 @@ class ApprovalSalesTeam(models.Model):
     _inherit = "approval.sales.team"
 
     sale_type = fields.Selection([
-        ('reguler', 'Reqular'),('maklon', 'Maklon'),
+        ('reguler', 'Regular'),('maklon', 'Maklon'),
         ('sample', 'Sample')], string='Sales Type')

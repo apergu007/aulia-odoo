@@ -65,10 +65,10 @@ class WizardImportAdjusmentLine(models.TransientModel):
 
                 if not line[0]:
                     raise ValidationError(_(f'Kolom Product harus Di isi'))
-                pp_src = pp_obj.search(['|',('name', '=', line[0]),('default_code', '=', line[0])])
+                # pp_src = pp_obj.search(['|',('name', '=', line[0]),('default_code', '=', line[0])])
+                pp_src = pp_obj.search([('default_code', '=', line[0])])
                 if not pp_src:
-                    raise ValidationError(_(f'Product {line[0]} Tidak ditemukan'))
-                
+                    raise ValidationError(_(f'Internal Reference {line[0]} Tidak ditemukan'))
                 lot_src = False
                 if pp_src.is_storable and pp_src.tracking != 'none':
                     if not line[1]:

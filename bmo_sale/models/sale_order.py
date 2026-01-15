@@ -6,7 +6,7 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     sale_type = fields.Selection([
-        ('reguler', 'Reqular'),('maklon', 'Maklon'),
+        ('reguler', 'Regular'),('maklon', 'Maklon'),
         ('sample', 'Sample')], string='Sales Type')
     saldo_sisa = fields.Monetary('Sisa Saldo', related="partner_id.saldo_sisa")
     sale_categ_id = fields.Many2one('sales.category', 'Sales Category')

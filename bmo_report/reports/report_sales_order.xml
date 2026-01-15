@@ -171,7 +171,9 @@
                             <div class="col-4">
                                 <t t-set="dpp_rumus" t-value="0.0"/>
                                 <t t-set="dpp_rumus" t-value="((o.amount_total/1.11) * (11/12))"/>
-                                <t t-set="t_wo_disc" t-value="sum([line.product_uom_qty*line.price_unit for line in o.order_line])"/>
+                                <!-- <t t-set="t_wo_disc" t-value="sum([line.product_uom_qty*line.price_unit for line in o.order_line])"/> -->
+                                <t t-set="t_disc" t-value="abs((t_disc*-1) + sum([line.price_total for line in o.order_line if 0 > line.price_total]))"/>
+                                <t t-set="sub_total" t-value="sum([line.price_total for line in o.order_line])"/>
                                 <t t-set="discount_total" t-value="sum([line.price_subtotal for line in o.order_line])"/>
                                 <table class="table table-borderless" style="width:100%;border-collapse: collapse;text-align:right;">
                                     <tr>
@@ -179,7 +181,7 @@
                                         <td>:</td>
                                         <td style="text-align:right;">
                                             <!-- <span t-esc="'{0:,.2f}'.format(int(t_wo_disc))"/> -->
-                                            <span t-esc="t_wo_disc" t-options='{"widget": "float", "precision": 2}'/>
+                                            <span t-esc="sub_total" t-options='{"widget": "float", "precision": 2}'/>
                                         </td>
                                     </tr>
                                     <tr>
@@ -195,7 +197,7 @@
                                         <td>:</td>
                                         <td style="text-align:right;">
                                             <!-- <span t-esc="'{0:,.2f}'.format(int(t_wo_disc-t_disc))"/> -->
-                                            <span t-esc="t_wo_disc-t_disc-o.amount_tax" t-options='{"widget": "float", "precision": 2}'/>
+                                            <span t-esc="sub_total-t_disc-o.amount_tax" t-options='{"widget": "float", "precision": 2}'/>
                                         </td>
                                     </tr>
                                     <tr>
